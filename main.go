@@ -10,7 +10,7 @@ import (
 	"text/template"
 )
 
-var usage = `%[1]s visualizes dependencies between PDSCs using Graphviz (http://www.graphviz.org/)
+var usage = `%[1]s visualizes dependencies between Pegasus Data Schema (PDSC) files using Graphviz.
 
 Usage:
 
