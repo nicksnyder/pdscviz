@@ -78,7 +78,7 @@ func (g *Graph) visitPDSC(path string, info os.FileInfo, err error) error {
 	}
 	parent := g.displayName(pdsc.Namespace, pdsc.Name)
 	for _, field := range pdsc.Fields {
-		if tr := field.typeRef(); tr != nil {
+		if tr := field.typeRef(); tr != nil && !tr.isPrimitive() {
 			child := g.displayName(pdsc.Namespace, tr.Name)
 			g.addEdge(parent, child, tr.Collection)
 		}

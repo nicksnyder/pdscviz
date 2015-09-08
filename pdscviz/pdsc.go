@@ -30,3 +30,11 @@ type TypeRef struct {
 	Name       string
 	Collection bool
 }
+
+func (tr *TypeRef) isPrimitive() bool {
+	switch tr.Name {
+	case "int", "long", "float", "double", "bytes", "string", "null", "boolean":
+		return true
+	}
+	return false
+}
