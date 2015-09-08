@@ -93,6 +93,7 @@ func main() {
 	templateData["GraphAttrs"] = graphAttrs
 
 	t := template.Must(template.New("").Parse(`digraph G {
+	node [shape="box"];
 	fontsize=11.0;
 	overlap=prism;
 	{{if .GraphAttrs}}{{.GraphAttrs}};{{end}}
