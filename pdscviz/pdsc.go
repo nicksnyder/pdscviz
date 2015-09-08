@@ -2,8 +2,9 @@ package main
 
 // TODO: handle includes
 type PDSC struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
+	Name      string      `json:"name"`
+	Namespace string      `json:"namespace"`
+	Ref       interface{} `json:"ref"`
 	Fields    []PDSCField
 }
 
@@ -28,9 +29,11 @@ func resolveType(t interface{}, collection bool) []TypeRef {
 			case "map":
 				return resolveType(t["values"], true)
 			case "record":
-				return resolveType(t["fields"], false)
+				return resolveType(t["fields"], collection)
 			case "array":
 				return resolveType(t["items"], true)
+			case "typeref":
+				return resolveType(t["ref"], collection)
 			}
 		}
 		return resolveType(t["type"], collection)

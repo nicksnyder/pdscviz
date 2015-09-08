@@ -79,11 +79,17 @@ func (g *Graph) visitPDSC(path string, info os.FileInfo, err error) error {
 		fatalf("unable to parse %s because %s\n", path, err)
 	}
 	parent := g.displayName(pdsc.Namespace, pdsc.Name)
+
+	var typeRefs []TypeRef
+	if pdsc.Ref != nil {
+		typeRefs = append(typeRefs, resolveType(pdsc.Ref, false)...)
+	}
 	for _, field := range pdsc.Fields {
-		for _, tr := range field.typeRefs() {
-			child := g.displayName(pdsc.Namespace, tr.Name)
-			g.addEdge(parent, child, tr.Collection)
-		}
+		typeRefs = append(typeRefs, field.typeRefs()...)
+	}
+	for _, tr := range typeRefs {
+		child := g.displayName(pdsc.Namespace, tr.Name)
+		g.addEdge(parent, child, tr.Collection)
 	}
 	return nil
 }
