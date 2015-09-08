@@ -111,6 +111,7 @@ func main() {
 	}
 
 	infof("wrote graph to %s", out)
+	// TODO: don't suggest twopi for full graph
 	infof("cat %s | twopi -Tpng > /tmp/pdsc.png && open /tmp/pdsc.png", out)
 }
 
