@@ -14,8 +14,14 @@ var usage = `%[1]s visualizes dependencies between Pegasus Data Schema (PDSC) fi
 
 Usage:
 
+    %[1]s [options]
+		    Graphs all models.
+
     %[1]s [options] usages <root entity>
+		    Graphs all models that transitively depend on <root entity>.
+
     %[1]s [options] dependencies <root entity>
+		    Graphs all models that <root entity> transitively depends on.
 
 Options:
 
@@ -31,7 +37,7 @@ func main() {
 	var out, dir, trimPrefix, graphAttrs string
 	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.StringVar(&out, "out", "/tmp/pdsc.dot", "the output file")
-	flag.StringVar(&dir, "dir", "", "the directory to scan for PDSC files (defaults to the current directory)")
+	flag.StringVar(&dir, "dir", ".", "the directory to scan for PDSC files (defaults to the current directory)")
 	flag.StringVar(&trimPrefix, "trimPrefix", "", "the prefix to remove from each type name")
 	flag.StringVar(&graphAttrs, "graphAttrs", "", "extra attributes for the graph (see http://www.graphviz.org/content/attrs)")
 	flag.Parse()
@@ -64,14 +70,16 @@ func main() {
 			}
 		}
 	default:
-		fatalf("unknown command %s", command)
-	}
-
-	if dir == "" {
-		var err error
-		dir, err = os.Getwd()
-		if err != nil {
-			fatalf("unable to get current working directory: %s", err)
+		commandFunc = func(g *Graph) map[string]interface{} {
+			var edges []string
+			for _, es := range g.Children {
+				for _, e := range es {
+					edges = append(edges, e.graphvizFormat())
+				}
+			}
+			return map[string]interface{}{
+				"Edges": edges,
+			}
 		}
 	}
 
