@@ -41,7 +41,9 @@ func (g *Graph) walkEdges(root string, edges map[string][]Edge, visited map[stri
 	nextEdges := edges[root]
 	for _, nextEdge := range nextEdges {
 		nextRoot := visitor(nextEdge)
+		verbosef("walking edge %s -> %s", root, nextRoot)
 		if _, ok := visited[nextRoot]; !ok {
+			visited[nextRoot] = struct{}{}
 			g.walkEdges(nextRoot, edges, visited, visitor)
 		} else {
 			verbosef("breaking cycle; already visited %s", nextRoot)
