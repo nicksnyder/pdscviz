@@ -35,11 +35,13 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var out, dir, trimPrefix, graphAttrs string
+	// var exclude RegexpValue
 	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.StringVar(&out, "out", "/tmp/pdsc.dot", "the output file")
 	flag.StringVar(&dir, "dir", ".", "the directory to scan for PDSC files (defaults to the current directory)")
 	flag.StringVar(&trimPrefix, "trimPrefix", "", "the prefix to remove from each type name")
 	flag.StringVar(&graphAttrs, "graphAttrs", "", "extra attributes for the graph (see http://www.graphviz.org/content/attrs)")
+	// flag.Var(&exclude, "exclude", "nodes matching this regular expression will be excluded")
 	flag.Parse()
 
 	var commandFunc func(*Graph) map[string]interface{}
