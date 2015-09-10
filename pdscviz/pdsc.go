@@ -1,10 +1,12 @@
 package main
 
-// TODO: handle includes
+import "strings"
+
 type PDSC struct {
-	Name      string      `json:"name"`
-	Namespace string      `json:"namespace"`
-	Ref       interface{} `json:"ref"`
+	Name      string        `json:"name"`
+	Namespace string        `json:"namespace"`
+	Ref       interface{}   `json:"ref"`
+	Include   []interface{} `json:"include"`
 	Fields    []PDSCField
 }
 
@@ -12,35 +14,50 @@ type PDSCField struct {
 	Type interface{} `json:"type"`
 }
 
-func (f PDSCField) typeRefs() []TypeRef {
-	return resolveType(f.Type, false)
+func (p *PDSC) fullyQualifiedName() string {
+	return fullyQualifiedName(p.Namespace, p.Name)
 }
 
-func resolveType(t interface{}, collection bool) []TypeRef {
+func (p *PDSC) typeRefs() []TypeRef {
+	var typeRefs []TypeRef
+	if p.Ref != nil {
+		typeRefs = append(typeRefs, p.resolveType(p.Ref, false)...)
+	}
+	if p.Include != nil {
+		typeRefs = append(typeRefs, p.resolveType(p.Include, false)...)
+	}
+	for _, field := range p.Fields {
+		typeRefs = append(typeRefs, p.resolveType(field.Type, false)...)
+	}
+	return typeRefs
+}
+
+func (p *PDSC) resolveType(t interface{}, collection bool) []TypeRef {
 	switch t := t.(type) {
 	case string:
 		if isPrimitive(t) {
 			return nil
 		}
-		return []TypeRef{{Name: t, Collection: collection}}
+		fqn := fullyQualifiedName(p.Namespace, t)
+		return []TypeRef{{Name: fqn, Collection: collection}}
 	case map[string]interface{}:
 		if tt, ok := t["type"].(string); ok {
 			switch tt {
 			case "map":
-				return resolveType(t["values"], true)
+				return p.resolveType(t["values"], true)
 			case "record":
-				return resolveType(t["fields"], collection)
+				return p.resolveType(t["fields"], collection)
 			case "array":
-				return resolveType(t["items"], true)
+				return p.resolveType(t["items"], true)
 			case "typeref":
-				return resolveType(t["ref"], collection)
+				return p.resolveType(t["ref"], collection)
 			}
 		}
-		return resolveType(t["type"], collection)
+		return p.resolveType(t["type"], collection)
 	case []interface{}:
 		var typeRefs []TypeRef
 		for _, item := range t {
-			for _, typeRef := range resolveType(item, collection) {
+			for _, typeRef := range p.resolveType(item, collection) {
 				typeRefs = append(typeRefs, typeRef)
 			}
 		}
@@ -61,4 +78,12 @@ func isPrimitive(name string) bool {
 		return true
 	}
 	return false
+}
+
+func fullyQualifiedName(namespace, name string) string {
+	if !strings.ContainsRune(name, '.') && len(namespace) > 0 {
+		// Name is not fully qualified so prefix with namespace
+		name = namespace + "." + name
+	}
+	return name
 }

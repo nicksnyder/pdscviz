@@ -87,17 +87,9 @@ func (g *Graph) visitPDSC(path string, info os.FileInfo, err error) error {
 		verbosef("%s", buf)
 		fatalf("unable to parse %s because %s\n", path, err)
 	}
-	parent := g.displayName(pdsc.Namespace, pdsc.Name)
-
-	var typeRefs []TypeRef
-	if pdsc.Ref != nil {
-		typeRefs = append(typeRefs, resolveType(pdsc.Ref, false)...)
-	}
-	for _, field := range pdsc.Fields {
-		typeRefs = append(typeRefs, field.typeRefs()...)
-	}
-	for _, tr := range typeRefs {
-		child := g.displayName(pdsc.Namespace, tr.Name)
+	parent := g.displayName(pdsc.fullyQualifiedName())
+	for _, tr := range pdsc.typeRefs() {
+		child := g.displayName(tr.Name)
 		g.addEdge(parent, child, tr.Collection)
 	}
 	return nil
@@ -107,13 +99,6 @@ func stripRegex(buf []byte, re string) []byte {
 	return regexp.MustCompile(re).ReplaceAllLiteral(buf, nil)
 }
 
-func (g *Graph) displayName(namespace, name string) string {
-	var displayName string
-	if strings.HasPrefix(name, "com.") {
-		// name is already fully qualified
-		displayName = name
-	} else {
-		displayName = namespace + "." + name
-	}
-	return strings.TrimPrefix(displayName, g.Namespace)
+func (g *Graph) displayName(name string) string {
+	return strings.TrimPrefix(name, g.Namespace)
 }
