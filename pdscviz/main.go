@@ -35,54 +35,55 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var out, dir, trimPrefix, graphAttrs string
-	// var exclude RegexpValue
+	var exclude RegexpValue
 	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.StringVar(&out, "out", "/tmp/pdsc.dot", "the output file")
 	flag.StringVar(&dir, "dir", ".", "the directory to scan for PDSC files (defaults to the current directory)")
 	flag.StringVar(&trimPrefix, "trimPrefix", "", "the prefix to remove from each type name")
 	flag.StringVar(&graphAttrs, "graphAttrs", "", "extra attributes for the graph (see http://www.graphviz.org/content/attrs)")
-	// flag.Var(&exclude, "exclude", "nodes matching this regular expression will be excluded")
+	flag.Var(&exclude, "exclude", "nodes matching this regular expression will be excluded")
 	flag.Parse()
 
-	var commandFunc func(*Graph) map[string]interface{}
-	command := flag.Arg(0)
-	switch command {
+	var commandFunc func(*Graph) *GraphvizData
+	switch command := flag.Arg(0); command {
 	case "usages":
-		commandFunc = func(g *Graph) map[string]interface{} {
+		commandFunc = func(g *Graph) *GraphvizData {
 			root := flag.Arg(1)
 			var edges []string
 			g.walkParents(root, func(e Edge) {
 				edges = append(edges, e.graphvizFormat())
 			})
-			return map[string]interface{}{
-				"Root":  root,
-				"Edges": edges,
+			return &GraphvizData{
+				Root:  root,
+				Edges: edges,
 			}
 		}
 	case "dependencies":
-		commandFunc = func(g *Graph) map[string]interface{} {
+		commandFunc = func(g *Graph) *GraphvizData {
 			root := flag.Arg(1)
 			var edges []string
 			g.walkChildren(root, func(e Edge) {
 				edges = append(edges, e.graphvizFormat())
 			})
-			return map[string]interface{}{
-				"Root":  root,
-				"Edges": edges,
+			return &GraphvizData{
+				Root:  root,
+				Edges: edges,
 			}
 		}
-	default:
-		commandFunc = func(g *Graph) map[string]interface{} {
+	case "":
+		commandFunc = func(g *Graph) *GraphvizData {
 			var edges []string
 			for _, es := range g.Children {
 				for _, e := range es {
 					edges = append(edges, e.graphvizFormat())
 				}
 			}
-			return map[string]interface{}{
-				"Edges": edges,
+			return &GraphvizData{
+				Edges: edges,
 			}
 		}
+	default:
+		fatalf("unknown command: %s", command)
 	}
 
 	g := NewGraph(trimPrefix)
@@ -92,7 +93,17 @@ func main() {
 	}
 
 	templateData := commandFunc(g)
-	templateData["GraphAttrs"] = graphAttrs
+	templateData.GraphAttrs = graphAttrs
+
+	if exclude.regexp != nil {
+		var edges []string
+		for _, edge := range templateData.Edges {
+			if !exclude.regexp.MatchString(edge) {
+				edges = append(edges, edge)
+			}
+		}
+		templateData.Edges = edges
+	}
 
 	t := template.Must(template.New("").Parse(`digraph G {
 	node [shape="box"];
