@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -74,8 +75,16 @@ func (g *Graph) visitPDSC(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		fatalf("unable to read %s because %s\n", path, err)
 	}
+
+	// Strip out end of line comments since they aren't valid json.
+	buf = stripRegex(buf, `//[^"\n]*`)
+
+	// Strip out block comments since they aren't valid json.
+	buf = stripRegex(buf, `/\*(\*[^/]|[^*])*\*/`)
+
 	var pdsc PDSC
 	if err := json.Unmarshal(buf, &pdsc); err != nil {
+		verbosef("%s", buf)
 		fatalf("unable to parse %s because %s\n", path, err)
 	}
 	parent := g.displayName(pdsc.Namespace, pdsc.Name)
@@ -92,6 +101,10 @@ func (g *Graph) visitPDSC(path string, info os.FileInfo, err error) error {
 		g.addEdge(parent, child, tr.Collection)
 	}
 	return nil
+}
+
+func stripRegex(buf []byte, re string) []byte {
+	return regexp.MustCompile(re).ReplaceAllLiteral(buf, nil)
 }
 
 func (g *Graph) displayName(namespace, name string) string {
