@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -37,13 +37,14 @@ func main() {
 	var out, dir, trimPrefix, graphAttrs string
 	var exclude RegexpValue
 	flag.BoolVar(&verbose, "v", false, "verbose output")
-	flag.StringVar(&out, "out", "/tmp/pdsc.dot", "the output file")
+	flag.StringVar(&out, "out", "", "the output file (defaults to stdout)")
 	flag.StringVar(&dir, "dir", ".", "the directory to scan for PDSC files (defaults to the current directory)")
 	flag.StringVar(&trimPrefix, "trimPrefix", "", "the prefix to remove from each type name")
 	flag.StringVar(&graphAttrs, "graphAttrs", "", "extra attributes for the graph (see http://www.graphviz.org/content/attrs)")
 	flag.Var(&exclude, "exclude", "nodes matching this regular expression will be excluded")
 	flag.Parse()
 
+	var recommendedCommand string
 	var commandFunc func(*Graph) *GraphvizData
 	switch command := flag.Arg(0); command {
 	case "usages":
@@ -58,6 +59,7 @@ func main() {
 				Edges: edges,
 			}
 		}
+		recommendedCommand = "twopi"
 	case "dependencies":
 		commandFunc = func(g *Graph) *GraphvizData {
 			root := flag.Arg(1)
@@ -70,6 +72,7 @@ func main() {
 				Edges: edges,
 			}
 		}
+		recommendedCommand = "twopi"
 	case "":
 		commandFunc = func(g *Graph) *GraphvizData {
 			var edges []string
@@ -82,6 +85,7 @@ func main() {
 				Edges: edges,
 			}
 		}
+		recommendedCommand = "neato"
 	default:
 		fatalf("unknown command: %s", command)
 	}
@@ -111,35 +115,43 @@ func main() {
 	overlap=prism;
 	{{if .GraphAttrs}}{{.GraphAttrs}};{{end}}
 	{{if .Root}}root="{{.Root}}";{{end}}
-	{{range .Edges}}
-	  {{.}};
+	{{range .Edges}}{{.}};
 	{{end}}
-}`))
+}
+`))
 
 	var graph bytes.Buffer
 	if err := t.Execute(&graph, templateData); err != nil {
 		fatalf("unable to execute template because %s", err)
 	}
-	if err := ioutil.WriteFile(out, graph.Bytes(), 0644); err != nil {
-		fatalf("failed to write file %s because %s", out, err)
-	}
 
-	infof("wrote graph to %s", out)
-	// TODO: don't suggest twopi for full graph
-	infof("cat %s | twopi -Tpng > /tmp/pdsc.png && open /tmp/pdsc.png", out)
+	if out != "" {
+		outFile, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			fatalf("failed to write file %s because %s", out, err)
+		}
+		outFile.Write(graph.Bytes())
+		infof("wrote graph to %s", out)
+		infof("example: %s -Tpng %s > /tmp/pdsc.png && open /tmp/pdsc.png", recommendedCommand, out)
+	} else {
+		os.Stdout.Write(graph.Bytes())
+		infof("wrote graph to stdout (redirect to file or use -out parameter)")
+		infof("recommended graphviz command: %s", recommendedCommand)
+		infof("example: %s | %s -Tpng > /tmp/pdsc.png && open /tmp/pdsc.png", strings.Join(os.Args, " "), recommendedCommand)
+	}
 }
 
 func infof(format string, args ...interface{}) {
-	fmt.Printf(format+"\n", args...)
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 func verbosef(format string, args ...interface{}) {
 	if verbose {
-		fmt.Printf(format+"\n", args...)
+		infof(format, args...)
 	}
 }
 
 func fatalf(format string, args ...interface{}) {
-	fmt.Printf("fatal: "+format+"\n", args...)
+	infof("fatal: "+format+"\n", args...)
 	os.Exit(1)
 }
