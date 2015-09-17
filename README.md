@@ -7,3 +7,8 @@ Make sure you have [setup GOPATH](http://golang.org/doc/code.html#GOPATH).
 
     go get -u github.com/nicksnyder/pdscviz/pdscviz
     pdscviz -help
+
+You will also want to install Graphviz with GTS (example for Mac)
+
+    brew install gts
+    brew install graphviz --with-gts
