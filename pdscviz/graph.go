@@ -22,30 +22,37 @@ func NewGraph(namespace string) *Graph {
 	}
 }
 
-func (g *Graph) walkParents(root string, visitor func(Edge)) {
+// Walk the nodes
+func (g *Graph) walkParents(root string, depth int, visitor func(Edge)) {
 	visited := make(map[string]struct{})
-	g.walkEdges(root, g.Parents, visited, func(e Edge) string {
+	g.walkEdges(root, g.Parents, visited, depth, func(e Edge) string {
 		visitor(e)
 		return e.From
 	})
 }
 
-func (g *Graph) walkChildren(root string, visitor func(Edge)) {
+func (g *Graph) walkChildren(root string, depth int, visitor func(Edge)) {
 	visited := make(map[string]struct{})
-	g.walkEdges(root, g.Children, visited, func(e Edge) string {
+	g.walkEdges(root, g.Children, visited, depth, func(e Edge) string {
 		visitor(e)
 		return e.To
 	})
 }
 
-func (g *Graph) walkEdges(root string, edges map[string][]Edge, visited map[string]struct{}, visitor func(Edge) string) {
+// Walks all edges from the root node.
+// Nodes are not visited twice.
+// A negative depth will cause all edges to be walked.
+func (g *Graph) walkEdges(root string, edges map[string][]Edge, visited map[string]struct{}, depth int, visitor func(Edge) string) {
+	if depth == 0 {
+		return
+	}
 	nextEdges := edges[root]
 	for _, nextEdge := range nextEdges {
 		nextRoot := visitor(nextEdge)
 		verbosef("walking edge %s -> %s", root, nextRoot)
 		if _, ok := visited[nextRoot]; !ok {
 			visited[nextRoot] = struct{}{}
-			g.walkEdges(nextRoot, edges, visited, visitor)
+			g.walkEdges(nextRoot, edges, visited, depth-1, visitor)
 		} else {
 			verbosef("breaking cycle; already visited %s", nextRoot)
 		}

@@ -35,10 +35,12 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var out, dir, trimPrefix, graphAttrs string
+	var depth int
 	var exclude RegexpValue
 	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.StringVar(&out, "out", "", "the output file (defaults to stdout)")
 	flag.StringVar(&dir, "dir", ".", "the directory to scan for PDSC files (defaults to the current directory)")
+	flag.IntVar(&depth, "depth", -1, "the maximum number of edges to follow along any dependency path (defaults to no max)")
 	flag.StringVar(&trimPrefix, "trimPrefix", "", "the prefix to remove from each type name")
 	flag.StringVar(&graphAttrs, "graphAttrs", "", "extra attributes for the graph (see http://www.graphviz.org/content/attrs)")
 	flag.Var(&exclude, "exclude", "nodes matching this regular expression will be excluded")
@@ -51,7 +53,7 @@ func main() {
 		commandFunc = func(g *Graph) *GraphvizData {
 			root := flag.Arg(1)
 			var edges []string
-			g.walkParents(root, func(e Edge) {
+			g.walkParents(root, depth, func(e Edge) {
 				edges = append(edges, e.graphvizFormat())
 			})
 			return &GraphvizData{
@@ -64,7 +66,7 @@ func main() {
 		commandFunc = func(g *Graph) *GraphvizData {
 			root := flag.Arg(1)
 			var edges []string
-			g.walkChildren(root, func(e Edge) {
+			g.walkChildren(root, depth, func(e Edge) {
 				edges = append(edges, e.graphvizFormat())
 			})
 			return &GraphvizData{
